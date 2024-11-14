@@ -9854,7 +9854,7 @@ WHERE
 	jsonb_typeof(claims->'id_token_claims') != 'null' AND
 	login_type = 'oidc'
 	AND CASE WHEN $1 :: uuid != '00000000-0000-0000-0000-000000000000'::uuid  THEN
-		user_links.user_id = ANY(SELECT organization_members.user_id FROM public.organization_members WHERE organization_id = $1)
+		user_links.user_id = ANY(SELECT organization_members.user_id FROM organization_members WHERE organization_id = $1)
 		ELSE true
 	END
 
@@ -9871,7 +9871,7 @@ WHERE
 	jsonb_typeof(claims->'user_info_claims') != 'null' AND
 	login_type = 'oidc'
 	AND CASE WHEN $1 :: uuid != '00000000-0000-0000-0000-000000000000'::uuid  THEN
-		user_links.user_id = ANY(SELECT organization_members.user_id FROM public.organization_members WHERE organization_id = $1)
+		user_links.user_id = ANY(SELECT organization_members.user_id FROM organization_members WHERE organization_id = $1)
 		ELSE true
 	END
 `
