@@ -841,7 +841,7 @@ jobs:
           make gen/mark-fresh
           make build/coder-dylib
           # Remove a header file since they're identical
-          rm "$(ls *.h 2>/dev/null | head -n 1)" 2>/dev/null
+          rm "$(ls ./build/*.h 2>/dev/null | head -n 1)" 2>/dev/null
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
