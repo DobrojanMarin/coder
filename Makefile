@@ -79,8 +79,12 @@ PACKAGE_OS_ARCHES := linux_amd64 linux_armv7 linux_arm64
 # All architectures we build Docker images for (Linux only).
 DOCKER_ARCHES := amd64 arm64 armv7
 
+# All ${OS}_${ARCH} combos we build the desktop dylib for.
+DYLIB_ARCHES := darwin_amd64.dylib darwin_arm64.dylib
+
 # Computed variables based on the above.
 CODER_SLIM_BINARIES      := $(addprefix build/coder-slim_$(VERSION)_,$(OS_ARCHES))
+CODER_DYLIBS			 := $(addprefix build/coder-desktop_$(VERSION)_,$(DYLIB_ARCHES))
 CODER_FAT_BINARIES       := $(addprefix build/coder_$(VERSION)_,$(OS_ARCHES))
 CODER_ALL_BINARIES       := $(CODER_SLIM_BINARIES) $(CODER_FAT_BINARIES)
 CODER_TAR_GZ_ARCHIVES    := $(foreach os_arch, $(ARCHIVE_TAR_GZ), build/coder_$(VERSION)_$(os_arch).tar.gz)
@@ -128,12 +132,12 @@ release: $(CODER_FAT_BINARIES) $(CODER_ALL_ARCHIVES) $(CODER_ALL_PACKAGES) $(COD
 build/coder-slim_$(VERSION)_checksums.sha1: site/out/bin/coder.sha1
 	cp "$<" "$@"
 
-site/out/bin/coder.sha1: $(CODER_SLIM_BINARIES)
+site/out/bin/coder.sha1: $(CODER_SLIM_BINARIES) $(CODER_DYLIBS)
 	pushd ./site/out/bin
 		openssl dgst -r -sha1 coder-* | tee coder.sha1
 	popd
 
-build/coder-slim_$(VERSION).tar: build/coder-slim_$(VERSION)_checksums.sha1 $(CODER_SLIM_BINARIES)
+build/coder-slim_$(VERSION).tar: build/coder-slim_$(VERSION)_checksums.sha1 $(CODER_SLIM_BINARIES) $(CODER_DYLIBS)
 	pushd ./site/out/bin
 		tar cf "../../../build/$(@F)" coder-*
 	popd
@@ -237,6 +241,25 @@ $(CODER_ALL_BINARIES): go.mod go.sum \
 
 		cp "$@" "./site/out/bin/coder-$$os-$$arch$$dot_ext"
 	fi
+
+# This task builds Coder Desktop dylibs
+$(CODER_DYLIBS): go.mod go.sum $(GO_SRC_FILES)
+	@if [ "$(shell uname)" = "Darwin" ]; then
+		$(get-mode-os-arch-ext)
+		./scripts/build_go.sh \
+			--os "$$os" \
+			--arch "$$arch" \
+			--version "$(VERSION)" \
+			--output "$@" \
+			--dylib
+
+		cp "$@" "./site/out/bin/coder-desktop-$$os-$$arch.dylib"
+	else
+		echo "Skipping dylib build on non-Darwin OS"
+	fi
+
+# This task builds both dylibs
+build/coder-dylib: $(CODER_DYLIBS)
 
 # This task builds all archives. It parses the target name to get the metadata
 # for the build, so it must be specified in this format:

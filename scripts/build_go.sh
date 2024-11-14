@@ -2,7 +2,7 @@
 
 # This script builds a single Go binary of Coder with the given parameters.
 #
-# Usage: ./build_go.sh [--version 1.2.3-devel+abcdef] [--os linux] [--arch amd64] [--output path/to/output] [--slim] [--agpl] [--boringcrypto]
+# Usage: ./build_go.sh [--version 1.2.3-devel+abcdef] [--os linux] [--arch amd64] [--output path/to/output] [--slim] [--agpl] [--boringcrypto] [--dylib]
 #
 # Defaults to linux:amd64 with slim disabled, but can be controlled with GOOS,
 # GOARCH and CODER_SLIM_BUILD=1. If no version is specified, defaults to the
@@ -25,6 +25,9 @@
 #
 # If the --boringcrypto parameter is specified, builds use boringcrypto instead of
 # the standard go crypto libraries.
+#
+# If the --dylib parameter is specified, the Coder Desktop `.dylib` is built
+# instead of the standard binary. This is only supported on macOS arm64 & amd64.
 
 set -euo pipefail
 # shellcheck source=scripts/lib.sh
@@ -40,8 +43,9 @@ output_path=""
 agpl="${CODER_BUILD_AGPL:-0}"
 boringcrypto=${CODER_BUILD_BORINGCRYPTO:-0}
 debug=0
+dylib=0
 
-args="$(getopt -o "" -l version:,os:,arch:,output:,slim,agpl,sign-darwin,boringcrypto,debug -- "$@")"
+args="$(getopt -o "" -l version:,os:,arch:,output:,slim,agpl,sign-darwin,boringcrypto,dylib,debug -- "$@")"
 eval set -- "$args"
 while true; do
 	case "$1" in
@@ -76,6 +80,10 @@ while true; do
 		;;
 	--boringcrypto)
 		boringcrypto=1
+		shift
+		;;
+	--dylib)
+		dylib=1
 		shift
 		;;
 	--debug)
@@ -168,13 +176,25 @@ if [[ "$agpl" == 1 ]]; then
 fi
 
 cgo=0
+sdk=""
+if [[ "$dylib" == 1 ]]; then
+	if [[ "$os" != "darwin" ]]; then
+		error "dylib builds are not supported on $os"
+	fi
+	cgo=1
+	cmd_path="./vpn/dylib/lib.go"
+	build_args+=("-buildmode=c-shared")
+	sdk="$(xcrun --sdk macosx --show-sdk-path)"
+fi
+
 goexp=""
 if [[ "$boringcrypto" == 1 ]]; then
 	cgo=1
 	goexp="boringcrypto"
 fi
 
-GOEXPERIMENT="$goexp" CGO_ENABLED="$cgo" GOOS="$os" GOARCH="$arch" GOARM="$arm_version" go build \
+GOEXPERIMENT="$goexp" CGO_ENABLED="$cgo" GOOS="$os" GOARCH="$arch" GOARM="$arm_version" SDKROOT="$sdk" \
+ 	go build \
 	"${build_args[@]}" \
 	"$cmd_path" 1>&2
 
