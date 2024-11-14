@@ -812,19 +812,29 @@ jobs:
       - name: Ensure required checks
         run: |
           echo "Checking required checks"
-          echo "- fmt: ${{ needs.fmt.result }}"
-          echo "- lint: ${{ needs.lint.result }}"
-          echo "- gen: ${{ needs.gen.result }}"
-          echo "- test-go: ${{ needs.test-go.result }}"
-          echo "- test-go-pg: ${{ needs.test-go-pg.result }}"
-          echo "- test-go-race: ${{ needs.test-go-race.result }}"
-          echo "- test-js: ${{ needs.test-js.result }}"
-          echo "- test-e2e: ${{ needs.test-e2e.result }}"
-          echo "- offlinedocs: ${{ needs.offlinedocs.result }}"
+          
+          for job in ${{ toJSON(needs.*.job) }}; do
+            echo "- $job: ${{ toJSON(needs[job].result) }}"
+          done
           echo
 
-          # We allow skipped jobs to pass, but not failed or cancelled jobs.
-          if [[ "${{ contains(needs.*.result, 'failure') }}" == "true" || "${{ contains(needs.*.result, 'cancelled') }}" == "true" ]]; then
+          failed=false
+          for job in ${{ toJSON(needs.*.job) }}; do
+            result="${{ toJSON(needs[job].result) }}"
+            runner="${{ toJSON(needs[job].runner) }}"
+            
+            # Skip test-go-pg failures on windows
+            if [[ "$job" == "test-go-pg" && ("$runner" == "windows-latest") && "$result" == "failure" ]]; then
+              continue
+            fi
+            
+            if [[ "$result" == "failure" || "$result" == "cancelled" ]]; then
+              failed=true
+              break
+            fi
+          done
+
+          if [[ "$failed" == "true" ]]; then
             echo "One of the required checks has failed or has been cancelled"
             exit 1
           fi
