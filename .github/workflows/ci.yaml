@@ -826,9 +826,9 @@ jobs:
       - name: Setup build tools
         run: |
          brew install bash gnu-getopt make
-         echo "$(brew --prefix bash)/bin" >> $GITHUB_ENV
-         echo "$(brew --prefix gnu-getopt)/bin" >> $GITHUB_ENV
-         echo "$(brew --prefix make)/libexec/gnubin" >> $GITHUB_ENV
+         echo "$(brew --prefix bash)/bin" >> $GITHUB_PATH
+         echo "$(brew --prefix gnu-getopt)/bin" >> $GITHUB_PATH
+         echo "$(brew --prefix make)/libexec/gnubin" >> $GITHUB_PATH
 
       - name: Setup Go
         uses: ./.github/actions/setup-go
