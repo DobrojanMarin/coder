@@ -381,6 +381,8 @@ jobs:
           - ubuntu-latest
           - macos-latest
           - windows-2022
+    outputs:
+      runner_os: ${{ matrix.os }}
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@91182cccc01eb5e619899d80e4e971d6181294a7 # v2.10.1
@@ -810,36 +812,44 @@ jobs:
           egress-policy: audit
 
       - name: Ensure required checks
+        shell: python
         run: |
-          echo "Checking required checks"
-          
-          for job in ${{ toJSON(needs.*.job) }}; do
-            echo "- $job: ${{ toJSON(needs[job].result) }}"
-          done
-          echo
+          import json
+          import sys
+          import os
 
-          failed=false
-          for job in ${{ toJSON(needs.*.job) }}; do
-            result="${{ toJSON(needs[job].result) }}"
-            runner="${{ toJSON(needs[job].runner) }}"
-            
-            # Skip test-go-pg failures on windows
-            if [[ "$job" == "test-go-pg" && ("$runner" == "windows-latest") && "$result" == "failure" ]]; then
-              continue
-            fi
-            
-            if [[ "$result" == "failure" || "$result" == "cancelled" ]]; then
-              failed=true
-              break
-            fi
-          done
+          print("Checking required checks")
 
-          if [[ "$failed" == "true" ]]; then
-            echo "One of the required checks has failed or has been cancelled"
-            exit 1
-          fi
+          # Get job names and results from GitHub context
+          jobs = json.loads(os.environ['NEEDS'])
+          job_names = sorted(jobs.keys())
+          for job_name in job_names:
+              result = jobs[job_name]['result']
+              print(f"- {job_name}: {result}")
+          print()
 
-          echo "Required checks have passed"
+          failed = False
+          for job_name in job_names:
+              result = jobs[job_name]['result']
+              runner_os = jobs[job_name]['outputs']['runner_os']
+              
+              # Skip test-go-pg failures on windows
+              if (job_name == "test-go-pg" and
+                  "windows" in runner_os and
+                  result == "failure"):
+                  continue
+              
+              if result in ["failure", "cancelled"]:
+                  failed = True
+                  break
+
+          if failed:
+              print("One of the required checks has failed or has been cancelled")
+              sys.exit(1)
+
+          print("Required checks have passed")
+        env:
+          NEEDS: ${{ toJSON(needs) }}
 
   build:
     # This builds and publishes ghcr.io/coder/coder-preview:main for each commit
