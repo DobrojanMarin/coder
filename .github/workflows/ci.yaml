@@ -823,6 +823,10 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Setup build tools
+        run: |
+         brew install bash gnu-getopt make
+
       - name: Setup Go
         uses: ./.github/actions/setup-go
 
