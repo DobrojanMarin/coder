@@ -979,7 +979,7 @@ jobs:
       #     prune-untagged: true
 
       - name: Upload build artifacts
-        if: github.ref == 'refs/heads/main'
+        # if: github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@604373da6381bf24206979c74d06a550515601b9 # v4.4.1
         with:
           name: coder
