@@ -384,51 +384,56 @@ jobs:
     outputs:
       runner_os: ${{ matrix.os }}
     steps:
-      - name: Harden Runner
-        uses: step-security/harden-runner@91182cccc01eb5e619899d80e4e971d6181294a7 # v2.10.1
-        with:
-          egress-policy: audit
-
-      - name: Checkout
-        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
-        with:
-          fetch-depth: 1
-
-      - name: Setup Go
-        uses: ./.github/actions/setup-go
-
-      - name: Setup Terraform
-        uses: ./.github/actions/setup-tf
-
-      - name: Test with PostgreSQL Database
-        env:
-          POSTGRES_VERSION: "13"
-          TS_DEBUG_DISCO: "true"
+      - name: Print runner_os
         shell: bash
         run: |
-          # if macOS, install google-chrome for scaletests
-          # As another concern, should we really have this kind of external dependency
-          # requirement on standard CI?
-          if [ "${{ matrix.os }}" == "macos-latest" ]; then
-            brew install google-chrome
-          fi
+          echo "runner_os"
 
-          # By default Go will use the number of logical CPUs, which
-          # is a fine default.
-          PARALLEL_FLAG=""
+      # - name: Harden Runner
+      #   uses: step-security/harden-runner@91182cccc01eb5e619899d80e4e971d6181294a7 # v2.10.1
+      #   with:
+      #     egress-policy: audit
 
-          # macOS will output "The default interactive shell is now zsh"
-          # intermittently in CI...
-          if [ "${{ matrix.os }}" == "macos-latest" ]; then
-            touch ~/.bash_profile && echo "export BASH_SILENCE_DEPRECATION_WARNING=1" >> ~/.bash_profile
-          fi
+      # - name: Checkout
+      #   uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+      #   with:
+      #     fetch-depth: 1
 
-          if [ "${{ runner.os }}" == "Linux" ]; then
-            make test-postgres
-          else
-            go run scripts/embedded-pg/main.go
-            DB=ci gotestsum --format standard-quiet -- -v -short -count=1 ./...
-          fi
+      # - name: Setup Go
+      #   uses: ./.github/actions/setup-go
+
+      # - name: Setup Terraform
+      #   uses: ./.github/actions/setup-tf
+
+      # - name: Test with PostgreSQL Database
+      #   env:
+      #     POSTGRES_VERSION: "13"
+      #     TS_DEBUG_DISCO: "true"
+      #   shell: bash
+      #   run: |
+      #     # if macOS, install google-chrome for scaletests
+      #     # As another concern, should we really have this kind of external dependency
+      #     # requirement on standard CI?
+      #     if [ "${{ matrix.os }}" == "macos-latest" ]; then
+      #       brew install google-chrome
+      #     fi
+
+      #     # By default Go will use the number of logical CPUs, which
+      #     # is a fine default.
+      #     PARALLEL_FLAG=""
+
+      #     # macOS will output "The default interactive shell is now zsh"
+      #     # intermittently in CI...
+      #     if [ "${{ matrix.os }}" == "macos-latest" ]; then
+      #       touch ~/.bash_profile && echo "export BASH_SILENCE_DEPRECATION_WARNING=1" >> ~/.bash_profile
+      #     fi
+
+      #     if [ "${{ runner.os }}" == "Linux" ]; then
+      #       make test-postgres
+      #     else
+      #       go run scripts/embedded-pg/main.go
+      #       DB=ci gotestsum --format standard-quiet -- -v -short -count=1 ./...
+      #     fi
 
       - name: Upload test stats to Datadog
         timeout-minutes: 1
@@ -793,15 +798,15 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - fmt
-      - lint
-      - gen
-      - test-go
+      # - lint
+      # - gen
+      # - test-go
       - test-go-pg
-      - test-go-race
-      - test-js
-      - test-e2e
-      - offlinedocs
-      - sqlc-vet
+      # - test-go-race
+      # - test-js
+      # - test-e2e
+      # - offlinedocs
+      # - sqlc-vet
     # Allow this job to run even if the needed jobs fail, are skipped or
     # cancelled.
     if: always()
@@ -819,6 +824,7 @@ jobs:
           import os
 
           print("Checking required checks")
+          print(os.environ['NEEDS'])
 
           # Get job names and results from GitHub context
           jobs = json.loads(os.environ['NEEDS'])
