@@ -84,7 +84,7 @@ DYLIB_ARCHES := darwin_amd64.dylib darwin_arm64.dylib
 
 # Computed variables based on the above.
 CODER_SLIM_BINARIES      := $(addprefix build/coder-slim_$(VERSION)_,$(OS_ARCHES))
-CODER_DYLIBS			 := $(addprefix build/coder-desktop_$(VERSION)_,$(DYLIB_ARCHES))
+CODER_DYLIBS             := $(addprefix build/coder-desktop_$(VERSION)_,$(DYLIB_ARCHES))
 CODER_FAT_BINARIES       := $(addprefix build/coder_$(VERSION)_,$(OS_ARCHES))
 CODER_ALL_BINARIES       := $(CODER_SLIM_BINARIES) $(CODER_FAT_BINARIES)
 CODER_TAR_GZ_ARCHIVES    := $(foreach os_arch, $(ARCHIVE_TAR_GZ), build/coder_$(VERSION)_$(os_arch).tar.gz)
