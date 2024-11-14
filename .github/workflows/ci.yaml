@@ -809,8 +809,7 @@ jobs:
   # Builds the dylibs and upload it as an artifact so it can be embedded in the main build
   build-dylib:
     needs: changes
-    # TODO: Uncomment
-    # if: github.ref == 'refs/heads/main' && needs.changes.outputs.docs-only == 'false' && !github.event.pull_request.head.repo.fork
+    if: github.ref == 'refs/heads/main' && needs.changes.outputs.docs-only == 'false' && !github.event.pull_request.head.repo.fork
     runs-on: ${{ github.repository_owner == 'coder' && 'depot-macos-latest' || 'macos-latest' }}
     steps:
       - name: Harden Runner
@@ -825,10 +824,10 @@ jobs:
 
       - name: Setup build tools
         run: |
-         brew install bash gnu-getopt make
-         echo "$(brew --prefix bash)/bin" >> $GITHUB_PATH
-         echo "$(brew --prefix gnu-getopt)/bin" >> $GITHUB_PATH
-         echo "$(brew --prefix make)/libexec/gnubin" >> $GITHUB_PATH
+          brew install bash gnu-getopt make
+          echo "$(brew --prefix bash)/bin" >> $GITHUB_PATH
+          echo "$(brew --prefix gnu-getopt)/bin" >> $GITHUB_PATH
+          echo "$(brew --prefix make)/libexec/gnubin" >> $GITHUB_PATH
 
       - name: Setup Go
         uses: ./.github/actions/setup-go
@@ -840,7 +839,7 @@ jobs:
 
           make gen/mark-fresh
           make build/coder-dylib
-          # Remove a header file since they're identical
+          # Remove one header file since they're identical
           rm "$(ls ./build/*.h 2>/dev/null | head -n 1)" 2>/dev/null
 
       - name: Upload build artifacts
@@ -858,15 +857,14 @@ jobs:
     needs:
       - changes
       - build-dylib
-    # TODO: Uncomment
-    # if: github.ref == 'refs/heads/main' && needs.changes.outputs.docs-only == 'false' && !github.event.pull_request.head.repo.fork
+    if: github.ref == 'refs/heads/main' && needs.changes.outputs.docs-only == 'false' && !github.event.pull_request.head.repo.fork
     runs-on: ${{ github.repository_owner == 'coder' && 'depot-ubuntu-22.04-8' || 'ubuntu-latest' }}
-    # permissions:
-    #   packages: write # Needed to push images to ghcr.io
-    # env:
-    #   DOCKER_CLI_EXPERIMENTAL: "enabled"
-    # outputs:
-    #   IMAGE: ghcr.io/coder/coder-preview:${{ steps.build-docker.outputs.tag }}
+    permissions:
+      packages: write # Needed to push images to ghcr.io
+    env:
+      DOCKER_CLI_EXPERIMENTAL: "enabled"
+    outputs:
+      IMAGE: ghcr.io/coder/coder-preview:${{ steps.build-docker.outputs.tag }}
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@91182cccc01eb5e619899d80e4e971d6181294a7 # v2.10.1
@@ -922,61 +920,60 @@ jobs:
             build/coder_"$version"_windows_amd64.zip \
             build/coder_"$version"_linux_amd64.{tar.gz,deb}
 
-      # TODO: Uncomment
-      # - name: Build Linux Docker images
-      #   id: build-docker
-      #   env:
-      #     CODER_IMAGE_BASE: ghcr.io/coder/coder-preview
-      #     CODER_IMAGE_TAG_PREFIX: main
-      #     DOCKER_CLI_EXPERIMENTAL: "enabled"
-      #   run: |
-      #     set -euxo pipefail
+      - name: Build Linux Docker images
+        id: build-docker
+        env:
+          CODER_IMAGE_BASE: ghcr.io/coder/coder-preview
+          CODER_IMAGE_TAG_PREFIX: main
+          DOCKER_CLI_EXPERIMENTAL: "enabled"
+        run: |
+          set -euxo pipefail
 
-      #     # build Docker images for each architecture
-      #     version="$(./scripts/version.sh)"
-      #     tag="main-$(echo "$version" | sed 's/+/-/g')"
-      #     echo "tag=$tag" >> $GITHUB_OUTPUT
+          # build Docker images for each architecture
+          version="$(./scripts/version.sh)"
+          tag="main-$(echo "$version" | sed 's/+/-/g')"
+          echo "tag=$tag" >> $GITHUB_OUTPUT
 
-      #     # build images for each architecture
-      #     # note: omitting the -j argument to avoid race conditions when pushing
-      #     make build/coder_"$version"_linux_{amd64,arm64,armv7}.tag
+          # build images for each architecture
+          # note: omitting the -j argument to avoid race conditions when pushing
+          make build/coder_"$version"_linux_{amd64,arm64,armv7}.tag
 
-      #     # only push if we are on main branch
-      #     if [ "${{ github.ref }}" == "refs/heads/main" ]; then
-      #       # build and push multi-arch manifest, this depends on the other images
-      #       # being pushed so will automatically push them
-      #       # note: omitting the -j argument to avoid race conditions when pushing
-      #       make push/build/coder_"$version"_linux_{amd64,arm64,armv7}.tag
+          # only push if we are on main branch
+          if [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            # build and push multi-arch manifest, this depends on the other images
+            # being pushed so will automatically push them
+            # note: omitting the -j argument to avoid race conditions when pushing
+            make push/build/coder_"$version"_linux_{amd64,arm64,armv7}.tag
 
-      #       # Define specific tags
-      #       tags=("$tag" "main" "latest")
+            # Define specific tags
+            tags=("$tag" "main" "latest")
 
-      #       # Create and push a multi-arch manifest for each tag
-      #       # we are adding `latest` tag and keeping `main` for backward
-      #       # compatibality
-      #       for t in "${tags[@]}"; do
-      #           ./scripts/build_docker_multiarch.sh \
-      #               --push \
-      #               --target "ghcr.io/coder/coder-preview:$t" \
-      #               --version $version \
-      #               $(cat build/coder_"$version"_linux_{amd64,arm64,armv7}.tag)
-      #       done
-      #     fi
+            # Create and push a multi-arch manifest for each tag
+            # we are adding `latest` tag and keeping `main` for backward
+            # compatibality
+            for t in "${tags[@]}"; do
+                ./scripts/build_docker_multiarch.sh \
+                    --push \
+                    --target "ghcr.io/coder/coder-preview:$t" \
+                    --version $version \
+                    $(cat build/coder_"$version"_linux_{amd64,arm64,armv7}.tag)
+            done
+          fi
 
-      # - name: Prune old images
-      #   if: github.ref == 'refs/heads/main'
-      #   uses: vlaurin/action-ghcr-prune@0cf7d39f88546edd31965acba78cdcb0be14d641 # v0.6.0
-      #   with:
-      #     token: ${{ secrets.GITHUB_TOKEN }}
-      #     organization: coder
-      #     container: coder-preview
-      #     keep-younger-than: 7 # days
-      #     keep-tags: latest
-      #     keep-tags-regexes: ^pr
-      #     prune-tags-regexes: |
-      #       ^main-
-      #       ^v
-      #     prune-untagged: true
+      - name: Prune old images
+        if: github.ref == 'refs/heads/main'
+        uses: vlaurin/action-ghcr-prune@0cf7d39f88546edd31965acba78cdcb0be14d641 # v0.6.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          organization: coder
+          container: coder-preview
+          keep-younger-than: 7 # days
+          keep-tags: latest
+          keep-tags-regexes: ^pr
+          prune-tags-regexes: |
+            ^main-
+            ^v
+          prune-untagged: true
 
       - name: Upload build artifacts
         # if: github.ref == 'refs/heads/main'
