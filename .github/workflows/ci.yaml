@@ -823,9 +823,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Node
-        uses: ./.github/actions/setup-node
-
       - name: Setup Go
         uses: ./.github/actions/setup-go
 

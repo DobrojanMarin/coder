@@ -194,7 +194,7 @@ if [[ "$boringcrypto" == 1 ]]; then
 fi
 
 GOEXPERIMENT="$goexp" CGO_ENABLED="$cgo" GOOS="$os" GOARCH="$arch" GOARM="$arm_version" SDKROOT="$sdk" \
- 	go build \
+	go build \
 	"${build_args[@]}" \
 	"$cmd_path" 1>&2
 
